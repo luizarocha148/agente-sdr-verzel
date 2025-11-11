@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agente SDR Elite Dev IA</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            min-height: 100vh;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 500px;
+            height: 80vh; 
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #chat-header {
+            background-color: #007bff;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        
+        /* O ID do corpo do chat mudou para 'chatBody' */
+        #chatBody {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: #e1ffc7;
+            color: #333;
+        }
+
+        .agent-message {
+            align-self: flex-start;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+        }
+
+        #input-area {
+            display: flex;
+            border-top: 1px solid #ddd;
+            padding: 10px;
+            background-color: #fff;
+        }
+
+        /* O ID do input mudou para 'userInput' */
+        #userInput {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+
+        /* O ID do botão mudou para 'sendBtn' */
+        #sendBtn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+
+        #sendBtn:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        
+        #sendBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Media Query para responsividade mobile-first */
+        @media (max-width: 600px) {
+            #chat-container {
+                height: 100vh;
+                border-radius: 0;
+            }
+            body {
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            Agente Elite Dev IA (Verzel)
+        </div>
+        <div id="chatBody">
+            </div>
+        <div id="input-area">
+            <input type="text" id="userInput" placeholder="Digite sua mensagem...">
+            <button id="sendBtn">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        // URL PÚBLICA DO RENDER
+        const API_URL = "https://agente-sdr-verzel.onrender.com/chat"; 
+
+        const chatBody = document.getElementById('chatBody');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Função para adicionar uma mensagem à interface
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = text; // Usa textContent para manter os * como texto
+            chatBody.appendChild(messageDiv);
+            // Rola para o final
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        // Função principal de envio e comunicação com a API
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (message === "") return;
+
+            // 1. Adiciona a mensagem do usuário
+            addMessage(message, 'user');
+            userInput.value = '';
+            sendBtn.disabled = true; // Desabilita enquanto espera
+
+            // 2. Chama a API do Flask/Render
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    // 3. Adiciona a resposta do Agente
+                    addMessage(data.response, 'agent');
+                } else {
+                    // Lida com erros da API
+                    addMessage('Erro na comunicação com a IA: ' + (data.response || 'Erro desconhecido.'), 'agent');
+                }
+            } catch (error) {
+                console.error('Erro de rede:', error);
+                // Mensagem de erro adaptada para o Render (Free Tier)
+                addMessage('❌ Erro de rede. O servidor pode estar dormindo (Render Free Tier). Tente enviar a mensagem novamente.', 'agent');
+            } finally {
+                sendBtn.disabled = false; // Reabilita o botão
+                userInput.focus();
+            }
+        }
+
+        // Event Listeners
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Mensagem inicial para começar a conversa
+        window.onload = () => {
+             // Esta mensagem é apenas de boas-vindas. O fluxo SDR começará com a primeira mensagem do usuário.
+            addMessage("Olá! Sou o Agente Elite Dev IA da Verzel, especialista em Soluções de Automação de Processos com Inteligência Artificial.", 'agent');
+            userInput.focus();
+        };
+    </script>
+</body>
+</html>
